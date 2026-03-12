@@ -1,0 +1,34 @@
+# Maven build output
+target/
+*.class
+*.jar
+*.war
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.project
+*.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test output (committed: testng.xml but not results)
+test-output/
+target/allure-results/
+target/allure-report/
+target/screenshots/
+target/logs/
+target/surefire-reports/
+
+# Environment secrets — NEVER commit these
+.env
+.env.*
+secrets.properties
+config-prod.properties
+
+# Healenium DB
+healenium/
