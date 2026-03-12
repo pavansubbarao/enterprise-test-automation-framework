@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="Enterprise Test Automation Suite" parallel="methods" thread-count="4" verbose="2">
+
+    <!-- Global parameters - override with -D system properties -->
+    <parameter name="env" value="dev"/>
+    <parameter name="browser" value="chrome"/>
+
+    <!-- ============================================================ -->
+    <!--  Full Suite                                                    -->
+    <!-- ============================================================ -->
+    <test name="API Tests">
+        <groups>
+            <run>
+                <include name="api"/>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.framework.api.SampleApiTest"/>
+        </classes>
+    </test>
+
+    <test name="UI Tests">
+        <groups>
+            <run>
+                <include name="ui"/>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.framework.ui.SampleUITest"/>
+        </classes>
+    </test>
+
+    <test name="Database Validation Tests">
+        <groups>
+            <run>
+                <include name="data"/>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.framework.data.DatabaseValidationTest"/>
+        </classes>
+    </test>
+
+</suite>
