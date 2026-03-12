@@ -1,0 +1,160 @@
+name: Test Automation Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, staging, prod]
+      suite:
+        description: 'TestNG suite file'
+        required: true
+        default: 'testng-smoke.xml'
+
+jobs:
+  # ------------------------------------------------------------------ #
+  #  API Tests                                                           #
+  # ------------------------------------------------------------------ #
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run API Tests
+        working-directory: java-test-framework
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GITHUB_COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+        run: |
+          mvn test \
+            -Denv=${{ github.event.inputs.env || 'dev' }} \
+            -DsuiteXmlFile=testng-api-only.xml \
+            -Dbrowser.headless=true \
+            --no-transfer-progress
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-api
+          path: java-test-framework/target/allure-results/
+          retention-days: 7
+
+  # ------------------------------------------------------------------ #
+  #  UI Tests (headless Chrome)                                          #
+  # ------------------------------------------------------------------ #
+  ui-tests:
+    name: UI Tests (Headless)
+    runs-on: ubuntu-latest
+    needs: api-tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Run UI Tests
+        working-directory: java-test-framework
+        env:
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GITHUB_COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+        run: |
+          mvn test \
+            -Denv=${{ github.event.inputs.env || 'dev' }} \
+            -DsuiteXmlFile=testng-ui-only.xml \
+            -Dbrowser=chrome \
+            -Dheadless=true \
+            --no-transfer-progress
+
+      - name: Upload Screenshots on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: java-test-framework/target/screenshots/
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-ui
+          path: java-test-framework/target/allure-results/
+
+  # ------------------------------------------------------------------ #
+  #  Allure Report                                                        #
+  # ------------------------------------------------------------------ #
+  report:
+    name: Publish Allure Report
+    runs-on: ubuntu-latest
+    needs: [api-tests, ui-tests]
+    if: always()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download API Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-api
+          path: allure-results/
+
+      - name: Download UI Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-ui
+          path: allure-results/
+
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          allure_history: allure-history
+
+      - name: Publish Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
