@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<!--
+    Smoke test suite - runs a fast subset of critical tests.
+    Use: mvn test -DsuiteXmlFile=testng-smoke.xml
+-->
+<suite name="Smoke Suite" parallel="false" verbose="1">
+    <test name="Smoke Tests">
+        <groups>
+            <run>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.framework.api.SampleApiTest">
+                <methods>
+                    <include name="testHealthEndpoint"/>
+                </methods>
+            </class>
+            <class name="com.framework.data.DatabaseValidationTest">
+                <methods>
+                    <include name="testDatabaseConnection"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+</suite>
