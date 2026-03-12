@@ -1,0 +1,6 @@
+username,email,password,role,expected_status
+admin_user,admin@test.com,Admin@123,admin,201
+viewer_user,viewer@test.com,Viewer@123,viewer,201
+editor_user,editor@test.com,Editor@123,editor,201
+invalid_role,invalid@test.com,Pass@123,unknown,400
+empty_email,,Pass@123,viewer,400
